@@ -1,0 +1,56 @@
+1 T
+file: file-check/src/buffer.c
+line: 90
+file: file-check/src/buffer.c
+line: 81
+00:06:10
+
+2 F
+file: file-check/src/buffer.c
+line: 81
+file: file-check/src/buffer.c
+line: 90
+00:03:27
+
+3 F
+file: file-check/src/buffer.c
+line: 81
+file: file-check/src/buffer.c
+line: 81
+00:01:29
+
+4 F
+file: file-check/src/buffer.c
+line: 90
+file: file-check/src/buffer.c
+line: 90
+00:04:21
+
+5 T
+file: file-check/src/apprentice.c
+line: 787
+file: file-check/src/apprentice.c
+line: 547
+00:05:18
+
+6 F
+file: file-check/src/apprentice.c
+line: 551
+file: file-check/src/apprentice.c
+line: 600
+00:05:12
+
+7 F
+file: file-check/src/cdf.c
+line: 552
+file: file-check/src/cdf.c
+line: 547
+00:04:06
+
+8 F
+file: file-check/src/ascmagic.c
+line: 99
+file: file-check/src/encoding.c
+line: 178
+00:08:47
+

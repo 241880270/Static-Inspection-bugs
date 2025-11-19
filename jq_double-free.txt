@@ -1,0 +1,55 @@
+1 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+file: jq-check/vendor/oniguruma/src/regexec.c
+line 4640
+00:03:16
+
+2 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+file: jq-check/vendor/oniguruma/src/regexec.c
+line 4636
+00:00:48
+
+3 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+00:00:35
+
+4 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+00:00:30
+
+5 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+00:00:30
+
+6 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+00:00:29
+
+7 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4860
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4879
+00:02:02
+
+8 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4879
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4860
+00:01:02

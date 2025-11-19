@@ -1,0 +1,34 @@
+1 F
+file: file-check/src/apprentice.c
+line: 692
+file: file-check/src/apprentice.c
+line: 693
+00:01:00
+
+2 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/magic.c
+line: 310
+00:02:23
+
+3 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/apprentice.c
+line: 543
+00:04:15
+
+4 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/apprentice.c
+line: 216
+00:01:06
+
+5 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/file.c
+line: 448
+00:02:30

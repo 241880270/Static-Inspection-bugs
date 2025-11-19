@@ -1,0 +1,69 @@
+1 T
+file: tmux-check/paste.c
+line: 294
+file: tmux-check/paste.c
+line: 296
+00:02:12
+
+2 T
+file: tmux-check/window.c
+line: 1168
+file: tmux-check/window-copy.c
+line: 3170
+00:05:44
+
+3 T
+file: tmux-check/window.c
+line: 367 
+file: tmux-check/window.c
+line: 402 
+00:04:30
+
+4 T
+file: tmux-check/window.c
+line: 367 
+file: tmux-check/window.c
+line: 414 
+00:00:31
+
+5 F
+file: tmux-check/cmd.c
+line: 574
+file: tmux-check/cmd-queue.c
+line: 397
+00:04:52
+
+6 F
+file: tmux-check/cmd-queue.c
+line: 399
+file: tmux-check/cmd.c
+line: 569
+00:02:22
+
+7 F
+file: tmux-check/window.c
+line: 1334
+file: tmux-check/cmd-capture-pane.c
+line: 198
+00:06:06
+
+8 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/window.c
+line: 1318
+00:02:05
+
+9 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/window.c
+line: 1324
+00:03:27
+
+10 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/grid-view.c
+line: 234
+00:04:28
