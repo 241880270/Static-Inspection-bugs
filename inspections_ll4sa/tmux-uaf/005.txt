@@ -1,0 +1,24 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary (dynamic-symbolic reasoning):
+
+- args_print(...) (lines 536–590) builds and returns a malloc'd, null-terminated string (buf). The caller is responsible for freeing it.
+- In cmd_print (lines 565–577):
+  - s = args_print(cmd->args);
+  - s is read (used as a "%s" argument to xasprintf or tested via *s).
+  - xasprintf allocates and returns a new string out that contains a copy of s's contents.
+  - s is then freed (free(s)) and out is returned. This is correct: s is used before free, and out does not point into s.
+- In cmdq_insert_hook (lines 353–443):
+  - arguments = args_print(args); so arguments is a malloc'd buffer like in args_print.
+  - cmdq_add_format(new_state, "hook_arguments", "%s", arguments);
+  - free(arguments);
+  - The critical question is whether cmdq_add_format copies the formatted string into the cmdq_state, or merely stores the pointer passed in (arguments).
+    - The usual and expected semantics for an "add_format" style API that takes a format string and variadic args is to format the args (e.g., via vasprintf/xasprintf) and store the resulting newly allocated string internally (or copy into an internal buffer). In that common case cmdq_add_format will create its own allocation containing the contents of arguments, so freeing arguments immediately after is safe.
+    - If cmdq_add_format instead stored the pointer value (arguments) verbatim (i.e., not copying the string), then freeing arguments here would leave the state holding a dangling pointer — that would be a real use-after-free.
+- The pattern in cmd_print (using xasprintf with "%s" and then freeing s) shows the codebase routinely passes strings into printf-like helpers that create their own copies. It is consistent and likely that cmdq_add_format follows the same behavior (allocating/copying the formatted value internally).
+- The Cppcheck trace appears to have associated the free from cmd_print (free(s)) with the other location, which can produce a spurious cross-function "use after free" if the tool conservatively believes the callee stores that pointer instead of copying it.
+
+Conclusion:
+
+Given the typical and expected semantics of the called helpers (xasprintf in cmd_print and the analogous behavior expected from cmdq_add_format), the code uses the returned string (arguments) to create a copied/owned value inside the state and then frees the temporary arguments buffer. There is no further use of the freed buffer. Therefore the Cppcheck warning is almost certainly a false positive unless cmdq_add_format has the unusual and unsafe behavior of storing caller pointers rather than copying/allocating its own string — which would be a separate bug in cmdq_add_format itself.
+
+Final verdict: @@@ false alarm @@@

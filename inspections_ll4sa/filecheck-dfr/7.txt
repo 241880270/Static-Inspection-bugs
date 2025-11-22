@@ -1,0 +1,18 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of dynamic reasoning (symbolic execution with path cases)
+- sat->sat_tab is allocated at line 496; if that allocation fails the function returns -1 immediately (no frees).
+- msa is allocated at line 510; if that allocation fails the code jumps to out1 and frees sat->sat_tab (line 554) and returns -1 (msa was NULL so no free(msa) there).
+- If msa is successfully allocated the code enters the loop. From there there are three distinct exit labels that handle cleanup:
+  - out (line 545): sets sat->sat_len = i; free(msa); return 0;
+  - out3 (line 549): sets errno and then falls through to out2;
+  - out2 (line 551): free(msa); fallthrough to out1 which frees sat->sat_tab and returns -1.
+- Note that the out label ends with return 0. Thus when execution takes the "out" path it frees msa and immediately returns; control cannot continue to out2/out1 after that.
+- When execution takes the error paths leading to out2 (including via out3), msa is freed exactly once at out2 and then sat->sat_tab is freed at out1. If msa had been NULL, free(NULL) is safe; but here msa was allocated so freeing at out2 is correct.
+
+Why the static analyzer likely reported a double free
+- The analyzer flagged free(msa) at 547 and at 552 as a double free. However those frees sit on mutually exclusive control paths: the first is in the success-return path (out) which returns immediately; the second is in the error path (out2/out1). There is no execution path that executes both frees in the same run. The analyzer appears to have missed the fact that out contains a return, thus cannot fall through to the later free.
+
+Conclusion
+- The code frees msa once on the success path and once on the error path, but these are mutually exclusive due to the return at out. This is a false positive from the static analysis tool.
+
+@@@ false alarm @@@

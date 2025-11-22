@@ -1,0 +1,26 @@
+✅ 实际调用模型: gpt-5-mini
+Static symbolic/dynamic simulation
+- Start with a valid session pointer s whose s->cwd points to heap memory (e.g. strdup("/home/user")) and whose refcount is 1.
+- Enter session_destroy(s,...):
+  - several cleanup steps happen (remove from RB tree, free s->tio, remove timers/groups/windows).
+  - at line 228 the code does free((void *)s->cwd); so the heap memory held by s->cwd is freed and s->cwd still points at the now-freed address (no NULLing).
+  - at line 230 session_remove_ref(s, __func__) is called. In typical tmux code patterns session_remove_ref will decrement the reference count and, when it reaches zero, call the session destructor/finalizer (commonly session_free or similar) which frees the session structure and its remaining owned resources — and that finalizer frees s->cwd as part of freeing the session fields.
+
+Why this produces a double free
+- If session_remove_ref eventually frees the session and that session-free path also frees s->cwd (very likely), then s->cwd is freed twice:
+  1) explicitly at line 228 in session_destroy, and
+  2) implicitly inside the session free routine invoked by session_remove_ref.
+- Freeing a member (s->cwd) here and then letting the generic session-free logic free it again is a classic double-free pattern.
+
+Evidence and likelihood
+- The Cppcheck qualifier already reports "Memory pointed to by 's' is freed twice."
+- The call order (free member, then call ref-remove which usually triggers final free) matches how double frees occur in reference-counted object patterns.
+- Without the body of session_remove_ref/session_free I cannot prove absolutely, but in almost all such designs session_remove_ref will free the session when the last reference is removed and that freeing code normally releases owned members including cwd. That makes this a real, highly likely bug.
+
+Recommended fixes
+- Remove the explicit free((void *)s->cwd) from session_destroy and let the centralized session free routine handle freeing session members; OR
+- After free((void *)s->cwd) set s->cwd = NULL and make sure session_free checks for NULL before free (less ideal because it duplicates member-freeing responsibility).
+- The canonical fix is to have a single owner of session members (the session free function) and not free the same member in multiple places.
+
+Conclusion
+Given the call sequence and typical implementation of session_remove_ref/session_free, this is a real double-free bug: the code frees s->cwd in session_destroy and then allows the reference-removal/finalize path to free it again. @@@ real bug @@@

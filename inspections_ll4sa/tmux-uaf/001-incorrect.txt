@@ -1,0 +1,15 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary
+- Trace: paste_get_name(name) returns a pointer pb; if pb != NULL, paste_free(pb) is called which removes pb from the RB trees and frees pb->data, pb->name and pb (lines 151–163). Immediately afterwards the code does pb = xmalloc(sizeof *pb) (line 296).
+- Potential worry: cppcheck flags a "Use after free of 'pb'." because pb is freed then subsequently appears on line 296.
+
+Detailed reasoning
+- The only "use" of pb after paste_free is the assignment pb = xmalloc(sizeof *pb). That assignment does not dereference the freed pointer at runtime. The expression sizeof *pb is computed at compile time from pb's type; it does not read memory through pb. Thus there is no runtime dereference of the previously freed memory in that statement.
+- After xmalloc returns a fresh allocation the code fills fields (pb->name, pb->data, etc.) and inserts the new pb into the trees. All uses of pb after the free are on the newly allocated object.
+- paste_free itself accesses pb->name before freeing (notify_paste_buffer(pb->name, 1)) and removes pb from RB trees while pb is still valid; then it frees pb. That is the expected safe pattern for replacing an existing entry.
+- I see no other path in this snippet that dereferences the freed pb between paste_free(pb) and the new allocation. No concurrent access is modeled here; if there were concurrent readers elsewhere that could access the freed pb, that would be a separate concurrency bug, but nothing in this single-threaded call sequence shows a use-after-free.
+
+Conclusion
+This is a false positive from the static analyzer (it confuses sizeof *pb or the subsequent assignment with a runtime dereference). The code as shown does not perform a use-after-free in this calling context.
+
+@@@ false alarm @@@

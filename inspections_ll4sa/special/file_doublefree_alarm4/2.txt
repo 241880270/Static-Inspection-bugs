@@ -1,0 +1,62 @@
+Summary
+- Cppcheck reports a double free at free(b->ebuf) (lines 81 and 90).
+- I traced the control flow and there is no path in a single invocation of buffer_fill that executes both free calls — they are in mutually exclusive branches. This is a false positive.
+
+Symbolic execution / path analysis
+1. Entry: buffer_fill sees b->elen.
+   - If b->elen != 0 the function returns immediately. No frees executed.
+2. If b->elen == 0 it continues:
+   - If b->fd == -1 return 0. No frees.
+   - If not S_ISREG goto out (out just sets b->elen = FILE_BADSIZE and returns -1). No frees.
+   - b->elen set to min(st_size, flen).
+     - If b->elen == 0:
+       - free(b->ebuf); b->ebuf = NULL; return 0;  <-- free at line 81, and function returns immediately.
+     - Else (b->elen > 0):
+       - b->ebuf = malloc(...);
+         - If malloc fails: goto out (no free).
+         - Else, call pread(...):
+           - If pread == -1:
+             - free(b->ebuf); goto out;  <-- free at line 90, then function returns via out.
+           - Else return 0.
+
+Key point: the free at line 81 is inside the branch where b->elen == 0 and the function returns immediately. The free at line 90 is inside the branch where b->elen > 0 after a successful malloc. There is no path in one call to execute both frees. They are in exclusive branches.
+
+Other notes
+- The code does reassign b->ebuf on successful malloc without freeing any previous buffer; that can be a memory-leak risk in some calling contexts, but it is not a double free here.
+- The presence of a custom free wrapper (memtest.c) that intercepts free does not change the control-flow reasoning above — it only logs/free-propagates; it doesn't make those two frees execute in the same invocation.
+
+Conclusion
+This is a false positive from the static analyzer (two frees exist in the function but they are mutually exclusive in control flow).
+
+@@@ false alarm @@@
+分析摘要
+- Cppcheck 报告在 free(b->ebuf) 处（第81行和第90行）存在双重释放
+- 经控制流追踪发现，在单次 buffer_fill 调用中不存在同时执行两处释放的路径——它们位于互斥分支中。此为误报。
+
+符号执行/路径分析
+1. 入口：buffer_fill 检查 b->elen
+   - 若 b->elen != 0 函数立即返回，不执行任何释放
+2. 若 b->elen == 0 则继续执行：
+   - 若 b->fd == -1 返回 0，不执行释放
+   - 若不符合 S_ISREG 跳转至 out（out仅设置 b->elen = FILE_BADSIZE 并返回 -1），不执行释放
+   - 设置 b->elen 为 min(st_size, flen)
+     - 若 b->elen == 0：
+       - 执行 free(b->ebuf); b->ebuf = NULL; return 0; <-- 第81行释放，函数立即返回
+     - 否则（b->elen > 0）：
+       - 执行 b->ebuf = malloc(...)
+         - 若 malloc 失败：跳转至 out（不执行释放）
+         - 否则调用 pread(...)：
+           - 若 pread == -1：
+             - 执行 free(b->ebuf); 跳转至 out; <-- 第90行释放，函数通过 out 返回
+           - 否则返回 0
+
+关键结论：第81行的释放位于 b->elen == 0 分支且函数立即返回；第90行的释放位于 b->elen > 0 分支且仅在 malloc 成功后执行。单次调用中不存在同时执行两处释放的路径，它们处于互斥分支。
+
+其他说明
+- 代码在成功 malloc 后重新赋值 b->ebuf 时未释放原有缓冲区，在某些调用上下文中可能存在内存泄漏风险，但此处不构成双重释放
+- 自定义 free 封装函数（memtest.c）的存在不影响上述控制流推理——它仅进行日志记录/释放传递，不会导致两处释放在同次调用中执行
+
+最终结论
+此为静态分析器的误报（函数中存在两处释放，但控制流互斥）
+
+@@@ 误报 @@@

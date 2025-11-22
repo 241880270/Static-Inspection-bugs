@@ -1,0 +1,28 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary
+- Observed path (window_pane_search):
+  - For each row i:
+    - line = grid_view_string_cells(s->grid, 0, i, screen_size_x(s));
+    - trim trailing spaces in-place (using strlen and assigning '\0');
+    - use line in log/regex/fnmatch;
+    - free(line).
+- grid_view_string_cells (grid-view.c) simply calls grid_string_cells(gd, px, py, nx, NULL, 0, NULL) and returns that pointer.
+- In cmd-capture-panes.c the function grid_string_cells is called with different args and its return value is also freed in that function.
+
+Simulated execution
+- grid_string_cells returns a freshly-allocated, NUL-terminated char * (the caller frees it) in the typical tmux implementation.
+- In window_pane_search the pointer returned by grid_view_string_cells is used only between allocation and the subsequent free in the same loop iteration: trimming, logging, matching, then free.
+- No access to the memory after the free in that function: free(line) is at the end of the iteration and then the loop either breaks or proceeds and reassigns line on the next iteration.
+
+Why the static analyzer likely reported this
+- The trace points at two different call sites that both call grid_string_cells and both free the returned pointer. A cross-function/static-analysis heuristic may have confused the lifetimes of the returned buffer across call sites, or assumed a single shared buffer that is freed in one place and reused in another.
+- The analyzer (Cppcheck) is known to produce false positives for heap buffer lifetimes across multiple callers when the allocation happens in a helper and multiple call sites free the result.
+- There is no evidence in the shown code that grid_string_cells returns an internal/static pointer that must not be freed; both calling sites treat the returned pointer as owned and call free on it. That is consistent and safe.
+
+Verification and conclusion
+- The sequence within window_pane_search does not use the pointer after it is freed; each iteration obtains a fresh pointer, uses it, and frees it.
+- I see no code path here that dereferences line after free or that frees the same allocation twice within the same function.
+- Given the information shown, this looks like a false positive from the static analyzer confusing cross-call lifetimes.
+
+Final verdict
+@@@ false alarm @@@

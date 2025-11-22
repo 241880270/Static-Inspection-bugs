@@ -1,0 +1,19 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of the trace and relevant code paths
+- "pattern" is assigned exactly once in each loop iteration, just before the glob() call:
+  - either pattern = xstrdup(path) (line 206) or xasprintf(&pattern, "%s/%s", cwd, path) (line 208).
+- After glob():
+  - if glob(...) != 0 the code calls globfree(&g); free(pattern); continue; (lines 223–225).
+  - if glob(...) == 0 the code does free(expanded); free(pattern); then proceeds to use g.gl_pathv (lines 227–231) and later globfree(&g) (line 232).
+- There is no other free(pattern) in the function, and pattern is re-assigned at the top of the next iteration (so the pointer is not reused across iterations without reassignment).
+
+Dynamic-symbolic reasoning with sample flows
+- Success case (glob returns 0): pattern is freshly allocated, then freed once at line 228. No later free of the same pointer in that iteration.
+- Error case (glob returns non-zero): pattern is freshly allocated, then freed once at line 224, and the loop continues; the next iteration will allocate a new pattern before any future free.
+- The variable expanded is managed separately (freed before re-assignment and freed on successful glob), and pattern is always a distinct allocation from expanded (xstrdup/xasprintf allocate new buffers), so free(expanded) and free(pattern) free different blocks.
+
+Why this is a false alarm
+- There is no path in which the same allocated pointer stored in pattern is freed twice: each allocation of pattern is followed by exactly one free in the same iteration (either the error branch or the success branch). pattern is not freed elsewhere nor reused without being re-assigned.
+- The static analyzer likely flagged both free() calls on the same variable as a possible double free without discriminating the mutually exclusive branches (continue after the error branch prevents falling through to the success free).
+- This assumes standard semantics of xstrdup/xasprintf (they allocate distinct buffers or terminatelist index out of range
+@@@false alarm@@@

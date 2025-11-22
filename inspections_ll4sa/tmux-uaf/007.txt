@@ -1,0 +1,23 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of execution and symbolic simulation
+- In window_pane_search (window.c):
+  - When regex == 0, new is allocated at line 1309 via xasprintf(&new, "*%s*", term).
+  - In the for loop (lines 1317–1332) each iteration:
+    - line is produced by grid_view_string_cells / grid_string_cells, trimmed, then used immediately.
+    - If not regex, fnmatch(new, line, flags) is called (line 1326). This uses new only as an input argument and does not store it anywhere beyond the call.
+    - line is freed immediately after use (line 1329).
+  - After the loop completes, new is freed at line 1334 (free(new)). There are no further uses of new after that free.
+
+- In cmd_capture_pane_history (cmd-capture-pane.c):
+  - grid_string_cells is called to produce a heap buffer (line = grid_string_cells(...)), used, and then freed (free(line) at line 207). grid_string_cells uses an internal static lastgc1 only to hand back a lastgc pointer; that static storage is not freed and is valid across calls. The returned buffer (line) is freshly allocated and freed by the caller. There is no apparent cross-call lifetime misuse here.
+
+Why the reported use-after-free is not reproduced
+- The reported trace mentions a use-after-free of variable new. However, all uses of new (fnmatch) occur before free(new). The free happens only once, after the loop; there are no subsequent uses of new.
+- fnmatch does not retain a pointer to its pattern argument beyond the call; it operates synchronously and returns, so passing new to fnmatch cannot cause a hidden later use-after-free through fnmatch.
+- grid_string_cells and grid_view_string_cells return freshly allocated buffers for line, which are consumed and freed by the caller. There is no path that frees new (the pattern) prematurely or stores new into the returned line buffer.
+
+Possible reason for analyzer false positive
+- Cppcheck likely produced a spurious warning (common when code uses an identifier called new, or when the analyzer has an imprecise interprocedural model and misattributes frees/uses across functions). The trace points to the free(new) site but there is no actual subsequent use of new.
+
+Conclusion
+This appears to be a false positive from the static analyzer; I cannot find a real use-after-free in the shown calling context. @@@ false alarm @@@

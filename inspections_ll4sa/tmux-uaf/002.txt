@@ -1,0 +1,34 @@
+✅ 实际调用模型: gpt-5-mini
+Dynamic symbolic execution (simulate with concrete values from the trace)
+
+- At start of window_copy_command, local variable wme points to the current mode entry (wme->wp == wp).
+- Later, if action == WINDOW_COPY_CMD_CANCEL the code calls window_pane_reset_mode(wp).
+- In window_pane_reset_mode:
+  - It gets wme = TAILQ_FIRST(&wp->modes);
+  - TAILQ_REMOVE(&wp->modes, wme, entry);
+  - Calls wme->mode->free(wme);
+  - Calls free(wme);
+  - (then continues to set screens/flags and notify)
+- After returning to window_copy_command, the function executes wme->prefix = 1 at line 3170.
+
+Verification and reasoning
+
+- The code in window_pane_reset_mode unconditionally frees the mode entry that is at the head of wp->modes.
+- In normal operation the "current" mode entry passed into window_copy_command is the head of wp->modes (the active mode). Therefore when action == CANCEL the call to window_pane_reset_mode(wp) will free the very same wme that window_copy_command was using.
+- Immediately after the reset/free, window_copy_command writes to wme->prefix. If wme was freed in window_pane_reset_mode, that is a use-after-free write.
+- There is no synchronization or re-validation of wme after window_pane_reset_mode, nor an early return, so the write occurs unconditionally after the cancel path.
+- The bug is not a false positive of a tool: the code clearly dereferences wme after a code path that can free it.
+
+Example (concrete) execution path demonstrating the bug:
+- wme points to the head mode entry.
+- A command sets action = WINDOW_COPY_CMD_CANCEL.
+- window_pane_reset_mode(wp) removes and frees that head entry (the same wme).
+- Return to window_copy_command and execute wme->prefix = 1 -> use-after-free.
+
+Conclusion and suggested fixes (brief)
+- This is a real use-after-free. Fixes could include:
+  - Not accessing wme after calling window_pane_reset_mode (e.g., return immediately when action == CANCEL), or
+  - Set a flag and skip the wme->prefix assignment when the mode was reset, or
+  - Ensure window_pane_reset_mode does not free the entry still in use (less desirable).
+
+@@@ real bug @@@

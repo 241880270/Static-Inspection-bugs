@@ -1,0 +1,32 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary (dynamic-symbolic simulation)
+
+- Call site: file_ascmagic() declares
+  - file_unichar_t *ubuf = NULL;
+  - calls file_encoding(ms, &ubuf, ...).
+  - After return it does free(ubuf) (line 99).
+
+- In file_encoding(..., file_unichar_t **ubuf, size_t *ulen, ...)
+  - There is a local file_unichar_t *udefbuf; and at startup:
+    if (ubuf == NULL)
+      ubuf = &udefbuf;
+    if (ulen == NULL)
+      ulen = &udeflen;
+  - Then code does: *ubuf = calloc(...);
+  - At label done: if (ubuf == &udefbuf) free(udefbuf);
+
+Concrete execution for the actual call from file_ascmagic:
+- The caller passes &ubuf, which is non-NULL, so inside file_encoding the test (ubuf == NULL) is false. Therefore ubuf points to the caller's variable (not to the local udefbuf).
+- file_encoding allocates memory and stores the pointer into *ubuf (i.e. into the caller's ubuf).
+- At cleanup, the condition (ubuf == &udefbuf) is false (because ubuf points at the caller's variable), so file_encoding does NOT free udefbuf.
+- Control returns to file_ascmagic; the caller now owns the allocated pointer in its ubuf variable and calls free(ubuf) exactly once (line 99).
+
+Why the static analyzer flagged double-free
+- The function uses an optional out-parameter pattern: if the caller passes NULL, the callee uses a local udefbuf and frees it itself; if the caller passes a non-NULL pointer, the callee stores the allocation into the caller's pointer and leaves freeing to the caller. Static analyzers often get confused about this conditional ownership transfer (pointer-to-local variable comparison) and may conservatively assume both the callee and the caller free the same allocation, leading to a false double-free warning.
+
+Edge cases
+- If a caller had passed ubuf == NULL, file_encoding frees the allocation itself (ubuf == &udefbuf), and the caller cannot free it (because they provided NULL), so no double free occurs.
+- There is no path in which both file_encoding frees the allocation and the caller also frees the same allocation for the shown caller (file_ascmagic). The pointer equality check (ubuf == &udefbuf) ensures ownership is exclusive in both cases.
+
+Conclusion
+This is a false positive from the static analyzer: the optional out-parameter/ownership convention in file_encoding prevents a double free in the shown call path. @@@ false alarm @@@

@@ -1,0 +1,23 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of execution trace (simulated)
+
+- session_destroy enters the loop and sets wl = RB_ROOT(&s->windows) (line 222).
+- session_destroy calls RB_REMOVE(winlinks, &s->windows, wl) (line 224). That expands to winlinks_RB_REMOVE(&s->windows, wl) via the macro in compat/tree.h. This removes the node from the red–black tree (unlinks it).
+- session_destroy then calls winlink_remove(&s->windows, wl) (line 225).
+- Inside winlink_remove:
+  - It optionally unlinks the wl from the per-window TAILQ and adjusts window refs.
+  - It calls RB_REMOVE(winlinks, wwl, wl) again (i.e. the same tree remove macro) — this is a second attempt to remove the same node from the RB tree.
+  - It finally calls free(wl) (line 206 in your window.c snippet).
+
+Why this is not a double free
+
+- There is only one explicit free(wl) in the shown code: inside winlink_remove. The first RB_REMOVE in session_destroy does not call free; it only unlinks the node from the RB tree. The RB_REMOVE macro (as shown) expands to a function-like symbol name##_RB_REMOVE; these removal helpers in the typical BSD-style tree implementation do not free the node memory — they only unlink it. Therefore memory for wl is freed exactly once (by free(wl) inside winlink_remove).
+- The static analyzer warning about "Memory pointed to by 's' is freed twice" (and pointing to the two remove calls) is a false positive: the analyzer has (incorrectly) associated the tree removal operation with deallocation or failed to track that free occurs exactly once later.
+
+Important additional note (real issue, but not a double free)
+- There is a real logic bug: the node is removed from the RB tree twice — once in session_destroy and again inside winlink_remove. Calling the RB_REMOVE routine on a node that has already been unlinked is invalid and can corrupt the tree or cause undefined behavior. The correct fix is to remove one of the two RB_REMOVE calls: either have session_destroy call notify_session_window() then call winlink_remove() (and let winlink_remove perform the single RB_REMOVE + free), or make winlink_remove assume the node has already been unlinked and not call RB_REMOVE itself. But this problem is about double removal of the RB node, not double free.
+
+Conclusion
+- The specific "Double Free" warning is a false alarm: there is only one call to free(wl) in the provided code paths, and RB_REMOVE does not free memory. The code does have a separate correctness problem (double RB_REMOVE) that should be addressed, but that is not the reported double-free.
+
+@@@ false alarm @@@

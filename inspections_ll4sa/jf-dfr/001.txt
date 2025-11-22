@@ -1,0 +1,21 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary (dynamic-symbolic simulation):
+- sr is allocated at line 4518 and is the single allocation of the function.
+- There are three explicit xfree(sr) calls in this function body:
+  - normal exit after the main loop: line 4636 then return ONIG_MISMATCH;
+  - finish: label at 4639 frees sr then return r;
+  - match: label at 4643 frees sr then return i.
+- All three frees are immediately followed by a return. Control flow that reaches any one of these frees returns from the function; there is no fall-through to another free after a return.
+- The only intra-function constructs that transfer control non-locally are gotos (e.g. goto total_active) and the REGSET_MATCH_AND_RETURN_CHECK(orig_range) macro. The goto total_active jumps into the initialization loop and does not free sr. The REGSET_MATCH_AND_RETURN_CHECK macro is used at several points and is presumably the path that jumps to one of the exit labels (finish or match); it does not appear to free sr itself in this usage pattern — instead the labels handle freeing and returning.
+
+Verification of the reported issue:
+- For a true double-free to occur the code would need to perform xfree(sr) and then later attempt to free sr again on the same call path. In this function every xfree(sr) is paired with an immediate return; therefore once any xfree(sr) executes, function execution ends and no second xfree in this function will run.
+- The static analyzer warning is likely triggered because it sees multiple frees of the same variable within one function body and cannot reliably reason about the control flow involving gotos/labels/macros. That leads to a false positive unless the macro or some other callee frees sr as well.
+
+Caveat:
+- If REGSET_MATCH_AND_RETURN_CHECK (or any function called within the code) actually freed sr before jumping to a label that also frees sr, then a double free would occur. However, that would be highly unusual: the pattern here implies the labels are the centralized cleanup points (they free sr and return). There is no indication in the provided snippet that the macro/function frees sr itself.
+
+Conclusion:
+- Given the code paths in this function and the immediate returns after each free, there is no path in which the same pointer sr is freed twice inside this function. The report is a false positive from the static analysis tool.
+
+@@@ false alarm @@@

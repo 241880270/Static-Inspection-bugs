@@ -1,0 +1,20 @@
+✅ 实际调用模型: gpt-5-mini
+Summary
+- The analyzer flags a "Double Free" because there are two xfree(msas) calls (lines ~4860 and ~4879). Both frees are guarded by IS_NOT_NULL(msas).
+- I inspected the control flow: msas is allocated in one of two places (empty-string branch at ~4803, or position-lead branch at ~4831). Execution then either goes to the "finish" path (which frees at ~4860) or to the "match2" path (which frees at ~4879), but not both.
+
+Detailed reasoning
+- msas initial value is NULL. There are only two allocation sites:
+  - empty-string case: msas = xmalloc(...) at ~4803, then control flows either to mismatch -> finish (free once) or to match (free once via match2).
+  - position-lead case: msas = xmalloc(...) at ~4831, then regset_search_body_position_lead(...) is called. After that call the caller checks r:
+    - if (r < 0) goto finish -> free at ~4860, return
+    - else goto match2 -> free at ~4879, return
+- The labels/returns prevent execution from falling through and executing both free sites in a single invocation. There is no path in this function that executes both xfree(msas) calls sequentially.
+- The only way a true double-free could happen here is if an invoked function (e.g. regset_search_body_position_lead) takes ownership of msas and frees it internally then returns in a way that makes the caller also free it. That would be an unconventional ownership convention (the caller allocated msas and passed it to a search routine expecting the routine to free it) and is not indicated by code patterns here. The typical pattern in this codebase is that the caller allocates MATCH_ARG array and frees it itself after use (the callee uses it but does not free the array).
+- Given the code shown, and typical ownership conventions, there is no intra-function double free; the analyzer is reporting a conservative/incorrect path that could execute both frees. This is a false positive from the static analysis.
+
+Recommendation (optional)
+- If you want to be extra defensive or make ownership explicit, document whether regset_search_body_position_lead may free msas. If it does not, no change needed. If it can free msas on error, change the contract or adjust the caller to avoid freeing again (e.g., transfer ownership explicitly or set msas = NULL after callee frees it).
+
+Conclusion
+@@@ false alarm @@@

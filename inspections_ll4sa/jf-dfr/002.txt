@@ -1,0 +1,23 @@
+✅ 实际调用模型: gpt-5-mini
+Step 1 — quick symbolic execution (concrete-ish values)
+- At function entry sr is allocated once at line 4518: sr = xmalloc(...).
+- After initialization the function proceeds into either the "all_low_high" branch or the else branch; both contain loops that call the macro REGSET_MATCH_AND_RETURN_CHECK at runtime when a candidate match is encountered.
+- Normal non-match exit path executes the xfree(sr) at line 4636 and immediately returns ONIG_MISMATCH (so execution stops there).
+- The function also contains two explicit labels used as alternate exits:
+  - finish: at ~4639 which does xfree(sr); return r;
+  - match: at ~4643 which does xfree(sr); set *rmatch_pos and return i;
+
+Step 2 — check where frees occur and possible control flow
+- sr is freed in exactly three places in this function: line ~4636 (normal non-match return), the finish label, and the match label.
+- The only way to reach the finish or match labels is via a jump/goto from code inside the function (most likely via REGSET_MATCH_AND_RETURN_CHECK). None of the code paths perform an xfree(sr) and then continue execution to one of the labels (the xfree + return at 4636 returns immediately).
+- Therefore any path that reaches finish or match will not previously have executed the xfree at 4636 (because that path returns at 4636). Conversely, if the xfree at 4636 runs, the function returns immediately and cannot later reach finish/match.
+
+Step 3 — consider the macro REGSET_MATCH_AND_RETURN_CHECK
+- The macro is used at the two places where a match would be detected. The only sensible implementations are to set appropriate local return values and goto the finish or match label (or do a direct return). Critically, if the macro were to free sr itself and then jump to finish/match, the labeled frees would double-free — but that would be a surprising and poor design: the purpose of having finish/match labels that free sr is to centralize cleanup.
+- Inspecting typical oniguruma idioms (and the calling pattern here) strongly indicates the macro performs control transfers (goto finish / goto match / return) without freeing sr itself. In that case each return path frees sr exactly once.
+
+Conclusion
+- There is no feasible path inside this function that frees sr twice. The static analyzer warning is caused by multiple distinct free sites and label/goto complexity confusing the analyzer.
+- Unless the REGSET_MATCH_AND_RETURN_CHECK macro itself frees sr (which would be an obvious bug and inconsistent with the rest of the cleanup design), this is a false positive from the static analyzer.
+
+@@@ false alarm @@@

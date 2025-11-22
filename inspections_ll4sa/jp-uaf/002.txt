@@ -1,0 +1,20 @@
+✅ 实际调用模型: gpt-5-mini
+Dynamic-symbolic execution (concrete example)
+- Suppose a = jv_string("2020-12-31T12:34"), b = jv_string("%Y-%m-%dT%H:%M"), so:
+  - input = jv_string_value(a) -> pointer to internal buffer "2020-12-31T12:34"
+  - fmt = jv_string_value(b) -> pointer to buffer for format
+  - end = strptime(input, fmt, &tm) -> returns pointer into input, e.g. pointing at the 'T' (not the terminating '\0')
+- Execution reaches the check at 1566 and continues (end != NULL and maybe *end != '\0' etc).
+- At 1569-1570 the code calls jv_free(a); jv_free(b); — these free the jv string objects that own the buffers pointed to by input/end.
+- Later, at 1600 the code does if (*end != '\0') — this dereferences a pointer into memory that has just been freed, so it is a use-after-free. If that condition is true it calls jv_string(end) which reads a nul-terminated string from the freed memory — also undefined behavior.
+
+Verification
+- The pointer end returned from strptime() points inside the buffer returned by jv_string_value(a). The code frees that jv (a) before reading *end or creating a new jv_string(end). Accessing the freed buffer is undefined behavior.
+- The control flow and values in the snippet directly demonstrate the illegal use: freeing happens at 1569–1570, dereference/use at 1600–1601.
+
+Severity / correct classification
+- This is a real use-after-free bug. The fix is to delay freeing a (and/or make a copy of the tail string) until after the code has inspected/used end, i.e., move the jv_free(a) / jv_free(b) to after the use of end (or copy end into a fresh buffer/jv before freeing).
+
+No indications in the report or code that freeing before use was intentional or benign; the checks earlier rely on end, so freeing makes subsequent code invalid.
+
+@@@ real bug

@@ -1,0 +1,24 @@
+✅ 实际调用模型: gpt-5-mini
+Dynamic symbolic execution (trace-based simulation)
+
+- cmdq_insert_hook:
+  - calls args_print(args) -> args_print allocates a fresh buffer with xcalloc (buf) and returns that pointer (assigned to local variable arguments).
+  - cmdq_add_format(..., arguments) uses the returned string.
+  - free(arguments) frees that heap buffer. After this free the local variable arguments is not used again in cmdq_insert_hook.
+
+- cmd_print:
+  - calls s = args_print(cmd->args) — this is a separate call that allocates a new heap buffer and returns it into local s.
+  - uses s (checks *s, builds out from s) and then free(s) before returning.
+
+Verification and reasoning
+
+- args_print constructs and returns a newly allocated buffer (xcalloc) held in its local buf. It does not return a pointer into the args structure or into any internal storage of args; it copies the argument strings into the allocated buffer via the helper functions.
+- The free(arguments) at cmd-queue.c:399 correctly frees the buffer returned by that particular args_print call; it does not free any part of the args structure.
+- The call in cmd.c:569 is a separate, independent call to args_print that returns a new buffer into variable s. There is no aliasing between the buffer freed in cmdq_insert_hook and the buffer returned later in cmd_print.
+- No code path uses a buffer after it was freed; each args_print allocation is freed by its owner and not reused afterwards.
+
+Why the static analyzer flagged it
+- The analyzer (Cppcheck) likely correlated the two uses because they both involve strings produced by args_print (variables named similarly conceptually) and produced a spurious inter-procedural use-after-free report. In reality the two values are distinct heap allocations and there is no use-after-free across the shown code paths.
+
+Conclusion
+This is a false positive from the static analyzer; there is no use-after-free in the given code paths. @@@ false alarm @@@

@@ -1,0 +1,34 @@
+✅ 实际调用模型: gpt-5-mini
+Summary (dynamic-symbolic execution):
+- expanded is initialized to NULL.
+- For each argument i:
+  - If args_has(..., 'F') is true:
+    - free(expanded);          // line 196
+    - expanded = format_single_from_target(...); // returns a newly allocated pointer (call it A)
+    - path = expanded;
+  - After successful glob (result == 0) the code does free(expanded); // line 227
+
+Concrete execution that triggers the problem:
+- Suppose two arguments both set the 'F' flag and format_single_from_target() returns non-NULL both times, and glob() succeeds for both.
+  - Iteration 1:
+    - free(expanded) at line 196: expanded == NULL -> no-op
+    - expanded := A
+    - glob succeeds -> free(expanded) at line 227 frees A, but expanded still points at freed memory (not set to NULL)
+  - Iteration 2:
+    - free(expanded) at line 196 now frees the memory pointed to by expanded again (double free)
+
+Analysis and verification:
+- The code frees the same pointer in two distinct places: once at line 227 unconditionally after glob success, and again at line 196 at the start of the next iteration when args_has(..., 'F') is true. Because expanded is not set to NULL after the free at line 227, the free at line 196 may attempt to free already freed memory => real double-free.
+- Additionally, there is a related resource management issue: if format_single_from_target() allocates expanded and a subsequent glob() fails, the code does not free expanded in the error branch (it only frees pattern and continues), which can cause a memory leak. So the freeing logic is inconsistent across success/failure paths.
+- The Cppcheck warning ("Memory pointed to by 'expanded' is freed twice.") matches the actual flow shown above. free(NULL) is safe, but free on a previously freed non-NULL pointer is undefined behavior and is demonstrably possible here.
+
+Fix suggestions:
+- After free(expanded) at line 227, set expanded = NULL so the later free(expanded) at 196 will be a no-op if no new allocation happened.
+  OR
+- Restructure ownership: do not free expanded at line 227; instead free the previous expanded only at the start of the next 'F' case and ensure expanded is freed once at the end of processing (and set to NULL after free). Also ensure error paths free expanded as needed.
+- Ensure all control paths either free expanded once or leave it NULL, avoiding both double-free and leaks.
+
+Conclusion:
+This is a real double-free bug (and also exposes a potential leak on error paths).
+
+@@@ real bug @@@

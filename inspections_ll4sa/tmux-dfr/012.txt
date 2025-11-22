@@ -1,0 +1,24 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary
+- The two frees cited by the analyzer are:
+  - cmd.c:574 free(s) where s = args_print(cmd->args);
+  - cmd-queue.c:399 free(arguments) where arguments = args_print(args);
+- These occur in different call sites and free the results of two separate calls to args_print().
+- Typical tmux semantics (and the way cmd_print is written) indicate args_print() returns a freshly allocated string which the caller must free. cmd_print frees its own local allocation before returning; cmdq_insert_hook separately calls args_print() and frees that separate allocation. There is no shared pointer passed between these functions that would be freed twice.
+
+Simulated execution (symbolic/concrete)
+- In cmd_print:
+  - s := args_print(cmd->args) -> gets pointer S1 (heap) ; used to build out ; free(S1) at line 574; function returns.
+- In cmdq_insert_hook:
+  - arguments := args_print(args) -> gets pointer S2 (heap) ; used to add formats ; free(S2) at line 399.
+- Unless args_print() returns the exact same pointer (S1 == S2) and that pointer is shared across calls, these are two independent allocations/frees and no double free happens.
+
+Why the static analyzer likely raised a false positive
+- The trace shown by Cppcheck suggests the analyzer assumed args_print returns the same pointer for the same args object (or otherwise conflated allocations across call sites). Static analyzers sometimes conflate allocations/returns across separate calls and report a double free when two different call sites each free what they think is the same allocation.
+- There is no evidence in the provided snippets that the pointer returned by args_print is stored globally or shared between callers, nor that one caller passes that pointer to the other. Both call sites treat the return as an owned allocation and free it locally.
+
+Notes and caveats
+- If args_print actually returned a pointer into a shared/static buffer or cached allocation owned elsewhere (i.e., not documented as "caller must free"), then freeing it in multiple places would be a real bug. However, cmd_print freeing its result is consistent with an API where callers free the returned string, and the code in cmdq_insert_hook follows the same pattern.
+- Without the implementation of args_print, absolute certainty isn't possible, but based on thelist index out of range
+
+@@@ false alarm @@@

@@ -1,0 +1,26 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary
+- Path taken: SPAWN_RESPAWN not set, spawn() creates a new winlink sc->wl and a new window w, then calls winlink_set_window(sc->wl, w). Later spawn_pane() returns NULL and the error path executes:
+  winlink_remove(&s->windows, sc->wl);
+  window_destroy(w);
+- winlink_remove (window.c:196-207) reads wl->window into w and, if non-NULL, calls window_remove_ref(w, __func__). window_remove_ref is the complementary routine that decrements the window reference count and destroys the window when the last reference is removed (i.e. it calls window_destroy when references reach zero).
+- Therefore, in the error path winlink_remove can (and normally will) end up destroying/freeing the window w via window_remove_ref -> window_destroy. The spawn() code then unconditionally calls window_destroy(w) again, giving a double free of w.
+
+Concrete simulated trace (symbolic/concrete):
+- sc->flags does not include SPAWN_RESPAWN, idx chosen, sc->wl = winlink_add(...).
+- (w = window_create(...)) returns a freshly allocated window.
+- winlink_set_window(sc->wl, w) attaches the window to the winlink (and increments window reference accounting).
+- spawn_pane(sc, cause) returns NULL -> error branch.
+- winlink_remove(&s->windows, sc->wl):
+  - sees wl->window == w, removes the link from w->winlinks and calls window_remove_ref(w,...).
+  - window_remove_ref notices this was the last reference (typical case) and calls window_destroy(w) -> frees w.
+  - winlink_remove frees wl.
+- spawn() then calls window_destroy(w) again -> use-after-free / double free.
+
+Conclusion
+This is a real double-free: the window can be destroyed inside winlink_remove (via window_remove_ref) and is then destroyed again unconditionally in spawn().
+
+Remediation note (brief)
+- Do not call window_destroy(w) after winlink_remove; rely on window_remove_ref to destroy the window when appropriate, or change ordering so that spawn() only destroys w if winlink_remove did not already drop the last reference (e.g., clear sc->wl->window before removing, or test wl->window before calling window_destroy).
+
+@@@ real bug @@@

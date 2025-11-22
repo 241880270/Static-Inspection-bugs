@@ -1,0 +1,18 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of trace simulation
+- file_ms_free(ms) (lines ~537-552) explicitly frees ms at line 551 after freeing internal members.
+- file_ms_alloc(flags) allocates ms via calloc (line 560). On error paths it jumps to the free label which does free(ms) at line 600 and returns NULL.
+- The two frees cited by the analyzer are in two distinct functions: one is the destructor (file_ms_free) and the other is the error cleanup in the allocator (file_ms_alloc).
+
+Why this is not a double free
+- For a double free to occur the same ms pointer must be freed twice along one execution path.
+- In file_ms_alloc the free at line 600 is reached only when ms was just allocated earlier in that function; after freeing it file_ms_alloc returns NULL. There is no further use of that ms pointer in file_ms_alloc after the free.
+- file_ms_free frees ms only when it is explicitly called with a valid ms pointer. There is no path inside file_ms_alloc that calls file_ms_free and then also reaches the cleanup free(ms) at line 600 for the same ms pointer.
+- Nothing in the shown code suggests that file_ms_free is implicitly invoked from file_ms_alloc or that file_ms_alloc would be called with a pointer that had already been freed by file_ms_free. The typical semantics of a function named magic_setflags (called in file_ms_alloc) is to set flags, not to free the structure passed to it. Even if magic_setflags failed, file_ms_alloc only handles failure by jumping to the local free label; it does not call file_ms_free.
+- Therefore there is no evidence in the provided snippet of a single execution path that frees the same ms pointer twice.
+
+Possible root of the static analyzer warning
+- Cppcheck sometimes reports cross-function double frees when it cannot reliably determine ownership or interprocedural call effects (e.g., it might conservatively assume a callee could free the buffer). With the available code, there is no interprocedural path demonstrating ms being freed twice.
+
+Conclusion
+Given the code shown, the warning is a false positive from the static analyzer. There is no concrete path in the snippet that frees the same ms pointer twice. @@@ false alarm @@@

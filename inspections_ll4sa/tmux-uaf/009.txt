@@ -1,0 +1,20 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of execution (symbolic/concrete):
+- At window.c:1318, line = grid_view_string_cells(...); this returns a freshly allocated C string.
+- The loop at 1319–1323 trims trailing whitespace in-place, so line still points to valid allocated memory.
+- At 1324 log_debug("%s: %s", __func__, line) is invoked. log_debug (log.c:126–136) simply checks log_file, does va_start, calls log_vwrite(msg, ap, ""), and va_end. There is no freeing of line inside log_debug itself.
+- After log_debug returns, the code uses line in fnmatch/regexec and then free(line) at 1329. The free happens only after the last use.
+
+Why this is not a use-after-free:
+- The pointer line is not freed before the call at 1324; the free occurs later at 1329.
+- log_debug does not free its string arguments; it forwards the va_list to log_vwrite which (as normal logging implementations do) formats the string into the log synchronously (e.g. vfprintf) and returns. There is no asynchronous storage of the provided pointer that would outlive the function call.
+- The sequence of uses is: allocate → mutate in-place → log (read-only) → match/search (read-only) → free. That is correct and safe.
+
+Why the static analyzer likely reported this:
+- Cppcheck (and similar tools) sometimes produce false positives around vararg/logging functions because they cannot determine that the logging path formats and consumes strings synchronously and does not store pointers for later use. Interprocedural effects of variadic functions are hard to analyze precisely, so the tool can conservatively assume the argument might be used after the function returns or that some unexpected free could happen.
+
+Other checks:
+- The trimming loop avoids out-of-bounds by iterating from strlen downwards and stopping when a non-space is found; no buffer underflow.
+- The code frees new/regfree appropriately outside the loop.
+
+Conclusion: the reported "Use After Free of 'line' at window.c:1324" is a false positive; there is no evidence in the provided code that line is freed before or during the log_debug call. @@@ false alarm @@@

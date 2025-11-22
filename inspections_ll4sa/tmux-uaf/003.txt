@@ -1,0 +1,26 @@
+✅ 实际调用模型: gpt-5-mini
+Static analysis warning is correct — this is a real use-after-free.
+
+Reasoning (symbolic/dynamic trace)
+- Call: window_remove(ww, w)
+- At entry assume w->references == 1 (concrete case that triggers destruction).
+- Line 399: w->references-- makes it 0.
+- Line 400: if (w->references == 0) is true.
+- Line 401: window_destroy(w) is called.
+  - Inside window_destroy: various cleanup runs and finally free(w) is executed at line 367.
+  - After window_destroy returns, the memory formerly pointed to by w is freed.
+- Line 402: window_remove(&windows, w) is executed using the same pointer w which has been freed.
+  - The callee immediately executes w->references-- (line 399 in the callee) — this dereferences the freed pointer (use-after-free). Behavior is undefined; this can crash or corrupt memory.
+
+Additional observations
+- window_destroy already removes the window from the global tree (RB_REMOVE at line 344). That makes the subsequent call window_remove(&windows, w) doubly suspicious.
+- The code is also logically inconsistent: calling window_remove after freeing the object can lead to undefined behavior immediately, and if by accident memory still contains the old value, it may recurse and corrupt memory further.
+- Likely fix: do not access w after it is freed. Either:
+  - Remove the recursive call window_remove(&windows, w) entirely (it appears unnecessary because window_destroy already removed w from the global tree), or
+  - If some other list needs updating, perform that removal before calling window_destroy, and do not use the pointer after free.
+  - More simply: change control flow so no operations on w occur after free.
+
+Conclusion
+This is a genuine use-after-free bug: freed pointer w is dereferenced in the subsequent window_remove call. @@@ real bug @@@
+
+@@@ real bug @@@

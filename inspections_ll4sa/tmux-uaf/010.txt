@@ -1,0 +1,27 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of reported issue
+- Tool: Cppcheck reports "Use after free of 'line'" and points at grid-view.c:234 (grid_view_string_cells returning grid_string_cells(...)) with a trace that includes cmd-capture-pane.c:207 (where free(line) is called).
+
+Reconstruction / symbolic execution (concrete example)
+- In cmd_capture_pane_history (cmd-capture-pane.c) the loop does:
+  - line = grid_string_cells(gd, 0, i, sx, &gc, flags, s);
+  - linelen = strlen(line);              // read returned buffer
+  - buf = cmd_capture_pane_append(buf, len, line, linelen); // copies from line
+  - possibly append a '\n' into buf based on grid_peek_line(...)
+  - free(line);                          // free the returned buffer
+- grid_view_string_cells (grid-view.c) simply does:
+  - px/py transform then return grid_string_cells(gd, px, py, nx, NULL, 0, NULL);
+- In grid_string_cells:
+  - buf is allocated with xmalloc(len) and grown with xreallocarray; the function returns that allocated buf.
+  - The function only accesses s when flags include GRID_STRING_WITH_SEQUENCES, but grid_view_string_cells calls it with flags == 0 and s == NULL, so no dereference of the NULL s occurs.
+  - Local stack arrays (e.g. code[8192]) are only used inside the function; their contents are copied into buf before returning.
+
+Why this is not a real use-after-free
+- The pointer returned by grid_string_cells is a heap allocation (xmalloc/xreallocarray) owned by the caller; the caller (cmd_capture_pane_history) uses the returned pointer (strlen, copying via append) and then frees it exactly once at the end of the iteration. This is the correct ownership pattern (use then free).
+- There is no path in the shown code where the returned buffer is freed before it's used. The free(line) is after all uses of line in that iteration.
+- grid_view_string_cells calling grid_string_cells with s == NULL is safe here because flags == 0 (no sequences) so grid_string_cells will not dereference s.
+- Static objects (like lastgc1) and local arrays (code) are not returned directly; contents copied into heap buffer before returning, so there is no pointer to freed stack memory being returned.
+
+Likely cause of the warning
+- Cppcheck (or the static analysis trace) appears to have misattributed a use-after-free: it likely followed a path where it thought the returned pointer aliases some local or freed storage, or confused the lifetime of buf/line across the call sites (grid-view.c wrapper and cmd-capture-pane.c caller). The concrete code shows correct allocation/usage/free semantics.
+@@@false alarm@@@

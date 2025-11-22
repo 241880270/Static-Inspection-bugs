@@ -1,0 +1,22 @@
+✅ 实际调用模型: gpt-5-mini
+Brief dynamic-symbolic walk-through
+- a and b are required to be JV_KIND_STRING; input = jv_string_value(a) returns a const char* pointer into a's internal buffer.
+- end = strptime(input, fmt, &tm) returns a pointer inside the same input buffer (or NULL).
+- The code then calls jv_free(a); jv_free(b); — this releases/frees a's internal string buffer.
+- Immediately after, if (*end != '\0') the code calls jv_string(end) to make a jv string from the suffix starting at end. But end points into the buffer that was just freed -> use-after-free.
+
+Concrete example
+- Suppose input string in a is "2020-01-01XYZ" and fmt parses the date portion; end points at "XYZ".
+- After jv_free(a) the memory holding "XYZ" is invalid.
+- Calling jv_string(end) reads from freed memory -> undefined behaviour (could crash or produce garbage).
+
+Why this is a real bug
+- The pointer end is derived from input (a)'s internal storage. Freeing a before creating a jv from end makes subsequent dereferences of end undefined.
+- The tool's reported symbol ('r') is incidental — the actual invalid access is reading the memory at end (and passing it to jv_string). The code path that constructs r (tm2jv) is fine; the dangerous access occurs when building the appended string from end after a has been freed.
+- Only the case *end != '\0' triggers the problem; when *end == '\0' the code does not touch end and is safe. But that conditional does not prevent the bug in general.
+
+Fix suggestion
+- Delay jv_free(a) (and possibly jv_free(b)) until after any use of end, i.e. after creating the jv_string(end) and appending it to r. Alternatively, copy the suffix into a newly allocated buffer (or create the jv_string(end) which copies) before freeing a; but you must ensure jv_string(end) does not read freed memory — so create the jv_string(end) while a is still valid.
+
+Verdict
+- The report identifies a genuine use-after-free (freeing a before using a pointer into its storage). @@@ real bug @@@

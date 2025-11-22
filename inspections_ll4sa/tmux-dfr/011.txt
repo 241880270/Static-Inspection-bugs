@@ -1,0 +1,26 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of traces and what they do
+- layout_free_cell(lc) (layout.c:92) recursively frees a layout_cell tree and finally calls free(lc) to release struct layout_cell objects.
+- window_destroy (window.c) first calls layout_free_cell(w->layout_root) and layout_free_cell(w->saved_layout_root), then later calls free(w->old_layout) (window.c:351).
+
+Why Cppcheck flagged a double free
+- Cppcheck likely inferred that w->old_layout could alias one of the layout_cell pointers freed by layout_free_cell and that calling free(w->old_layout) would therefore free the same memory again.
+
+Concrete reasoning / “symbolic execution”
+- The objects freed by layout_free_cell are struct layout_cell instances (and their children). The function ends with free(lc).
+- The pointer name old_layout suggests (and in the actual tmux code is) a char * containing a serialized layout string (e.g., produced by a layout_dump-like function), not a struct layout_cell *. That allocation is independent of the layout_cell tree allocations.
+- Therefore the sequence:
+  - layout_free_cell(w->layout_root) // frees layout_cell structs
+  - layout_free_cell(w->saved_layout_root)
+  - free(w->old_layout) // frees a separately-allocated string
+  does not free the same allocation twice.
+
+Why this is a false positive
+- The analyzer has no type/aliasing context here and infers that the same memory may be freed twice due to naming and multiple frees in the function. In reality the two kinds of frees target different allocations (layout cell structs vs. a malloc'd string), so no double free occurs.
+- There is no code shown that assigns a layout_cell pointer into w->old_layout (i.e., mixing types). In tmux’s design w->old_layout is used to hold a serialized layout (string), so aliasing does not occur unless the program has a type-confusion bug elsewhere (not indicated by the trace).
+
+Recommendation
+- If you want to suppress this sort of false positive, mark this path as benign for Cppcheck (or add annotation/comment) or ensure analyzers have visibility of the actual types/assignments.
+
+Conclusion
+@@@ false alarm @@@

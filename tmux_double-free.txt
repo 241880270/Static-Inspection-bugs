@@ -40,7 +40,7 @@ file: tmux-check/spawn.c
 line: 175
 00:05:26
 
-7
+7（重复）
 file: tmux-check/spawn.c
 line: 110
 file: tmux-check/spawn.c

@@ -1,0 +1,30 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis (symbolic execution)
+- Start at window_remove_ref(struct window *w, ...):
+  - Suppose w->references == 1.
+  - Line 409: w->references-- -> becomes 0.
+  - Line 412: condition true -> enters block.
+  - Line 413: window_destroy(w) is called.
+    - window_destroy logs and performs cleanup, including RB_REMOVE(windows, &windows, w) and finally free(w) at line 367.
+    - After window_destroy returns, w points to freed memory.
+  - Line 414: window_remove(&windows, w) is called.
+    - This invokes window_remove(struct windows *ww, struct window *w) (lines 397--404).
+    - The first operation there is w->references-- (line 399) — this dereferences w after it was freed -> use-after-free.
+
+Same pattern if window_remove() itself is invoked with references == 1: window_remove decrements to 0, calls window_destroy(w) (freeing w) and then calls window_remove(&windows, w) recursively, which immediately dereferences the freed w.
+
+Why this is a real problem
+- window_destroy performs free(w) unconditionally when references reaches zero.
+- Any subsequent access to fields of w (like w->references) is a use-after-free and potentially leads to crashes or undefined behavior.
+- The code as shown plainly calls window_remove(&windows, w) after window_destroy(w), so it dereferences freed memory.
+
+Likely intended behavior and fixes
+- The code is inconsistent: window_destroy already removes the window from the global RB tree (RB_REMOVE) and frees w. Calling window_remove(&windows, w) after window_destroy is redundant and invalid.
+- Possible correct actions (pick one based on intended API):
+  - Remove the post-destroy call to window_remove(&windows, w). Let window_destroy handle RB_REMOVE and freeing.
+  - Or, if window_remove should be responsible for removing from the list and destroying, call window_remove(&windows, w) first (to remove from list) and then call window_destroy(w) once — but never call code that dereferences w after free.
+  - Ensure only one path frees w and that no code touches w after free.
+
+Conclusion: the reported path indeed causes a use-after-free: window_destroy frees w, then window_remove dereferences it. This is a real bug.
+
+@@@ real bug @@@

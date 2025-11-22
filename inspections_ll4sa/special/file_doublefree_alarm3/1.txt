@@ -1,0 +1,22 @@
+Summary of analysis
+- The two frees are at lines 81 and 90: free(b->ebuf) in the b->elen == 0 branch, and free(b->ebuf) on pread failure after a successful malloc.
+- There is no control-flow path in this function that executes both frees for the same call:
+  - If b->elen == 0 at lines 78–84, the function frees b->ebuf, sets b->ebuf = NULL and immediately returns (lines 81–83). The later code that calls malloc()/pread()/free() is not reached.
+  - If b->elen != 0, the function proceeds to allocate (line 85). Only in this path can line 90 be reached; in that situation b->ebuf holds the newly-allocated block and has not been freed before, so free at line 90 is freeing the malloc'd buffer exactly once.
+- free(NULL) is safe, and the code sets b->ebuf = NULL after the free in the zero-length branch, preventing a stale pointer surviving from that branch.
+- The analyzer likely flagged "double free" because it sees two free sites that free the same member and conservatively reports a possible double free without considering that the two frees are on mutually exclusive control-flow paths (one is when elen==0 and returns, the other is when allocation was just done and pread failed).
+
+No evidence in this snippet of a real double free (no path reaches both free sites for the same pointer). If there is other code elsewhere that frees b->ebuf without clearing the pointer, a double free could occur across calls, but that would be a different issue and is not shown here.
+
+Conclusion: false alarm. @@@ false alarm @@@
+分析摘要  
+- 两处释放分别位于第81行和第90行：在 b->elen == 0 分支中的 free(b->ebuf)，以及在 malloc 成功但 pread 失败时的 free(b->ebuf)。  
+- 该函数中不存在单次调用同时执行两处释放的控制流路径：  
+  - 若第78-84行处 b->elen == 0，函数会释放 b->ebuf，将 b->ebuf 设为 NULL 后立即返回（第81-83行）。后续调用 malloc()/pread()/free() 的代码不会被执行。  
+  - 若 b->elen != 0，函数会继续执行分配操作（第85行）。只有在此路径中才可能执行第90行；此时 b->ebuf 持有新分配的内存块且未被释放过，因此第90行的释放操作仅针对刚分配的内存缓冲区执行一次。  
+- free(NULL) 是安全的，代码在零长度分支中释放后已将 b->ebuf 设为 NULL，避免了悬空指针的残留。  
+- 分析器可能因发现两处释放同一成员而标记"双重释放"，但未充分考虑这两处释放位于互斥的控制流路径（一处在 elen==0 时立即返回，另一处仅在分配后 pread 失败时执行）。  
+
+当前代码片段中未发现真实双重释放的证据（不存在单次调用同时触发两处释放同一指针的路径）。若其他代码存在未清空指针就直接释放 b->ebuf 的情况，可能跨调用引发双重释放，但此为不同问题，本文未涉及。  
+
+结论：误报。 @@@ 误报 @@@

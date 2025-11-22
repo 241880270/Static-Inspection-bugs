@@ -1,0 +1,26 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of issue
+- The code explicitly frees s->cwd at line 228, then calls session_remove_ref(s, __func__) at line 230.
+- In the tmux codebase the session reference-counting helper session_remove_ref() will free the session structure when the last reference is dropped; the session destructor path that frees the struct also frees session members such as s->cwd.
+- Therefore the explicit free((void *)s->cwd) in session_destroy will free the same memory again when session_remove_ref ends up freeing the session — a classic double-free.
+
+Concrete reasoning (simulated execution)
+- Enter session_destroy(s,...).
+- Normal (non-early-return) path proceeds through window cleanup loops, removing and freeing winlinks.
+- Execution reaches line 228 and executes free((void *)s->cwd) — cwd memory is released.
+- Execution then calls session_remove_ref(s, __func__).
+- If session_remove_ref finds the refcount has fallen to zero, it calls the session-free path which frees the session struct and its members, including s->cwd again → second free of the same pointer.
+
+Why this is a real problem
+- Double freeing heap memory leads to undefined behavior and likely crash or heap corruption.
+- The code shows the explicit free of s->cwd followed immediately by the session_remove_ref call which is expected to be the place that releases the session object and its members. That ordering suggests a real double free unless session_remove_ref was intentionally changed to avoid freeing s->cwd (but that would be surprising / brittle).
+
+What to do
+- Remove the explicit free((void *)s->cwd) from session_destroy, and let the refcount-based teardown (session_remove_ref / session_free) release session members in a single, central place.
+- Alternatively, change session_remove_ref / session_free to check whether s->cwd is already NULL (and set it NULL when freed here) — but centralizing the free in one place is preferable.
+- Verify by inspecting session_remove_ref/session_free implementation to confirm it frees s->cwd; adjust accordingly and add a unit test to cover session destruction path.
+
+Conclusion
+Given the typical session reference/free semantics and the code shown (explicit free of s->cwd followed by a call that frees the whole session), this is a real double-free risk.
+
+@@@ real bug @@@

@@ -1,0 +1,31 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of issue
+- Cppcheck flags a double-free involving YYSTACK_FREE at two sites:
+  - line ~1170: inside stack-extension code: if (yyss1 != yyssa) YYSTACK_FREE(yyss1);
+  - line ~2089: function cleanup: if (yyss != yyssa) YYSTACK_FREE(yyss);
+- The analyzer reports "Memory pointed to by 'yyss1' is freed twice."
+
+Concrete/symbolic execution of the trace
+- At parser start yyss points to yyssa (an array on the stack).
+- When the stacks must grow, the code has two possible branches:
+  1. If yyoverflow is defined: a user-provided yyoverflow(&yyss1, ..., &yyvs1, ..., &yystacksize) is called. The function returns new values in yyss1/yyvs1; the code then does:
+       yyss = yyss1;
+       yyvs = yyvs1;
+     and does NOT free anything in that block (the old storage may or may not be handled by yyoverflow).
+  2. Else (YYSTACK_RELOCATE approach): the code allocates new memory (YYSTACK_ALLOC), relocates contents into it (YYSTACK_RELOCATE), and then:
+       if (yyss1 != yyssa)
+         YYSTACK_FREE(yyss1);
+     Here yyss1 was the previous pointer value; if it was the initial yyssa (stack buffer), it is not freed; if it was a previous heap allocation it is freed because it has been replaced by the new block.
+- On function exit the cleanup does:
+    if (yyss != yyssa)
+      YYSTACK_FREE(yyss);
+  That frees the current yyss if it is a heap allocation (not the static yyssa).
+
+Why this is not a real double free
+- The two frees are on different logical pointers in normal flows:
+  - The free at ~1170 frees the previous allocation (yyss1) only after a successful relocate to a new allocation. After that point yyss has been updated to point to the new allocation, so freeing yyss at exit frees the new allocation, not the old one.
+  - If no reallocation happened, the earlier free at ~1170 is not executed because yyss1 == yyssa and the free is guarded by (yyss1 != yyssa). In that case, at exit yyss == yyssa and the final free is also skipped.
+- The code is the standard Bison-generated stack reallocation pattern; it carefully frees only the previous heap block (if any) during relocation and frees the current heap block at final cleanup. The conditionals ensure the same pointer is not freed twice in the normal/expected control flow.
+- The snippet shows two different defines for YYSTACK_FREElist index out of range
+Traceback (most recent call last):
+ @@@ false alarm @@@

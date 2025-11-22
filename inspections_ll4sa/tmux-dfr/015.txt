@@ -1,0 +1,33 @@
+✅ 实际调用模型: gpt-5-mini
+I'll walk through recallocarray's control flow and simulate the relevant paths the analyzer likely considered.
+
+Function summary (relevant lines):
+- If ptr == NULL -> returns calloc(newnmemb, size). No free.
+- If newnmemb*size overflows -> errno=ENOMEM; return NULL. No free.
+- If oldnmemb*size overflows -> errno=EINVAL; return NULL. No free.
+- Compute oldsize, newsize.
+- If newsize <= oldsize and the shrink is small -> memset tail to zero and return ptr. No free.
+- Otherwise allocate newptr = malloc(newsize). If malloc fails -> return NULL. No free.
+- Copy data from ptr to newptr (either up to oldsize or newsize).
+- explicit_bzero(ptr, oldsize);
+- free(ptr);
+- return newptr;
+
+Symbolic execution of pointer state:
+- On entry ptr is either NULL or points to a valid allocated block (caller responsibility).
+- Only one place in the function calls free(ptr): the path after successful malloc and data copy (lines 78–79). On that path the function returns newptr (a different pointer allocated by malloc).
+- All other return paths return either a newly-allocated calloc (when ptr==NULL) or the original ptr (when no reallocation is necessary) or NULL on error — none of those paths free ptr.
+
+Could ptr be freed twice inside this function?
+- No. The function calls free(ptr) at most once, and only on the path where it also returns a fresh allocation newptr. There is no path that frees ptr and then later frees it again inside this function.
+
+Could the free(ptr) here be freeing the same pointer that will be returned (leading to a later double-free when caller frees the returned pointer)?
+- That would require newptr == ptr. That cannot happen in well-defined malloc semantics: newptr is the result of malloc(newsize) while ptr is still allocated (not freed yet). The allocator will not hand out a pointer identical to an already-in-use allocation. Therefore newptr != ptr, and the function does not return a pointer to freed memory.
+
+Possible external double-free?
+- A double-free could occur if the caller had already freed ptr before calling recallocarray, or if the caller frees both the original pointer and the returned pointer improperly. That would be a caller bug, not an internal bug of recallocarray. From the snippet provided there is no evidence of such misuse. The trace entry pointing at cmd-parse.y might indicate a caller-site problem, but that is outside the given snippet and cannot be confirmed here.
+
+Conclusion:
+- Within this function, there is no path that frees ptr twice and there is no scenario where the function returns a pointer to memory it already freed. The warning ("Memory pointed to by 'ptr' is freed twice") is therefore a false positive for this function implementation. If the analyzer's trace includes a caller that freed ptr before calling recallocarray, that would be a separate issue in the caller, not a double free inside recallocarray.
+
+@@@ false alarm @@@

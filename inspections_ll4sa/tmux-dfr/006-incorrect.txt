@@ -1,0 +1,36 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of issue
+- The report points to a double free at spawn.c:175 (the call sequence when spawn_pane() fails).
+- The code creates a new winlink (sc->wl) and a new window (w), ties them together with winlink_set_window(sc->wl, w), then calls spawn_pane().
+- On spawn_pane() failure the code does:
+  winlink_remove(&s->windows, sc->wl);
+  window_destroy(w);
+
+Why this is a double free
+- winlink_set_window(sc->wl, w) establishes the association wl->window = w and (very likely) adds the winlink into w->winlinks and increments the window reference count.
+- winlink_remove (window.c lines 196–207) does:
+    struct window *w = wl->window;
+    if (w != NULL) {
+        TAILQ_REMOVE(&w->winlinks, wl, wentry);
+        window_remove_ref(w, __func__);
+    }
+    RB_REMOVE(...);
+    free(wl);
+  So when wl->window != NULL, winlink_remove removes the reference from the window and calls window_remove_ref(). In typical tmux semantics window_remove_ref frees/destroys the window once its refcount hits zero.
+- In the failure path in spawn.c the code calls winlink_remove first; that will remove the only reference to w and therefore will cause window destruction. The subsequent explicit call window_destroy(w) therefore operates on an already-destroyed object -> double free / use-after-free.
+
+Concrete trace (simulated)
+1. sc->wl = winlink_add(...);
+2. w = window_create(...);
+3. winlink_set_window(sc->wl, w);  // wl->window == w, window refcount incremented
+4. wp = spawn_pane(sc, cause);  // returns NULL (failure)
+5. code executes winlink_remove(&s->windows, sc->wl); // removes wl, calls window_remove_ref(w) -> window destroyed
+6. code then calls window_destroy(w); // second destruction of same window -> double free
+
+Notes about alternatives / uncertainty
+- The diagnosis depends on window_remove_ref possibly freeing the window when refcount reaches zero. That is consistent with the function name and typical tmux reference-counting conventions and with the presence of TAILQ_REMOVE(&w->winlinks, wl, wentry) inside winlink_remove. If window_remove_ref did not free the window, then the explicit window_destroy(w) would be necessary; but that would make the behavior of winlink_remove surprising. Given the available code and naming, the more likely reality is that window_remove_ref does free the last reference, so this is a real double free.
+
+Conclusion
+This is a real double-free bug: after winlink_remove() the window may already have been destroyed and calling window_destroy(w) again is unsafe.
+
+@@@ real bug @@@

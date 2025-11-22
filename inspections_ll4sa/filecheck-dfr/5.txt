@@ -1,0 +1,28 @@
+✅ 实际调用模型: gpt-5-mini
+Summary of trace and simulated execution
+- The analyzer flags a double free: free at apprentice.c:787 (file_apprentice) and free at apprentice.c:547 (file_ms_free).
+- Simulating one realistic execution:
+  1. ms is a valid struct with ms->fnamebuf pointing to heap memory (allocated earlier).
+  2. file_apprentice(ms, fn, action) is called.
+  3. At line 757 the code frees the old ms->fnamebuf then replaces it with strdup(fn) → new pointer P.
+  4. Work proceeds; at line 774 fn = ms->fnamebuf; code parses P, uses it.
+  5. At line 787 the code calls free(ms->fnamebuf) again (frees P).
+  6. Later, when ms is destroyed, file_ms_free(ms) (line ~537) unconditionally calls free(ms->fnamebuf) again — a second free of P (or of the already-freed pointer if ms->fnamebuf wasn't updated), producing a double free/dangling-free.
+
+Why this is a real bug
+- file_ms_free is the destructor freeing all heap fields of ms, including ms->fnamebuf (line 547). file_apprentice also frees ms->fnamebuf at line 787. If file_apprentice frees ms->fnamebuf but does not NULL it, any later call to file_ms_free will free the same pointer again.
+- The code does not set ms->fnamebuf = NULL after the free at 787, so the pointer remains dangling and will be freed again.
+- There are normal, valid code paths where ms survives after file_apprentice returns (e.g., FILE_LOAD, FILE_CHECK, etc.), and the destructor will be called later; thus a double free is reachable in normal use.
+
+Concrete problematic sequence (concrete values)
+- Suppose ms->fnamebuf initially points to 0x1000.
+- file_apprentice frees 0x1000 at 757 and sets ms->fnamebuf = strdup(fn) => 0x2000.
+- file_apprentice frees 0x2000 at 787 but does not clear ms->fnamebuf.
+- Later file_ms_free frees ms->fnamebuf again (free(0x2000)) -> double free.
+
+Fix suggestions
+- Remove the free at line 787 in file_apprentice (do not free ms->fnamebuf there) and let the destructor (file_ms_free) handle it, OR
+- If file_apprentice must free that memory, immediately set ms->fnamebuf = NULL after free(ms->fnamebuf) to avoid a later double free, and ensure the rest of the code does not expect ms->fnamebuf to remain valid after return.
+
+Conclusion
+This is a genuine double-free/dangling-free defect: file_apprentice unconditionally frees ms->fnamebuf while file_ms_free also frees it later, and the pointer is not nulled. @@@ real bug @@@

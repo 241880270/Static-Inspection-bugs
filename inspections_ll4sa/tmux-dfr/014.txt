@@ -1,0 +1,24 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis summary
+- The two frees shown in the Cppcheck trace are in different functions and operate on different allocations:
+  - In window_pane_search (window.c) the local variable line is the result of grid_view_string_cells(...) and is freed at line 1330 in that function's loop.
+  - In cmd_capture_pane_history (cmd-capture-pane.c) the local variable line is the result of grid_string_cells(...) and is freed at line 207 in that function's loop.
+
+Simulated execution (per the snippet)
+- In cmd_capture_pane_history:
+  - Each iteration calls grid_string_cells(...), which returns a freshly allocated C string (named line).
+  - linelen = strlen(line) computes its length.
+  - buf = cmd_capture_pane_append(buf, len, line, linelen) appends a copy of the contents of line into buf and returns the (re)allocated result buffer.
+  - The code then writes a newline into the result buffer and calls free(line) to release the per-iteration string returned by grid_string_cells.
+  - That is a single free of the string returned by grid_string_cells in each iteration.
+
+- In window_pane_search:
+  - Independently, grid_view_string_cells(...) returns an allocated string (its own allocation) which is freed in that function's loop.
+
+Why this is a false positive
+- The two frees are freeing different allocations in different functions and different call paths. There is no evidence in the shown code that the same allocation is freed twice.
+- The only way the free at line 207 in cmd-capture-pane.c would be a double free is if cmd_capture_pane_append(...) itself freed its line argument. That would be surprising and violate the usual ownership contract implied by the call site (the caller still uses line after the call: it computes strlen before, and then explicitly frees it). The code pattern here clearly indicates the caller retains ownership and must free the per-iteration line; therefore cmd_capture_pane_append is expected not to free its line parameter.
+- The analyzer apparently associated different local variables named line across files and produced an incorrect cross-function double-free trace. This is a typical false positive from static analyzers when they do not track allocation sites precisely across different functions.
+
+Conclusion
+This report is a false positive from the static analyzer; there is no double free in the shown code paths. @@@ false alarm @@@

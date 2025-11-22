@@ -1,0 +1,18 @@
+✅ 实际调用模型: gpt-5-mini
+Analysis (symbolic execution):
+- Entry: buffer_fill sees b->elen. The early check at lines 68–69 returns if b->elen != 0. So the remainder of the function executes only when b->elen == 0 on entry.
+- Then b->elen is recomputed at lines 78–79 as min(b->st.st_size, b->flen).
+  - Case A: computed b->elen == 0 → the branch at 80–84 runs: free(b->ebuf) (line 81), set b->ebuf = NULL (82), return 0. Function exits there; line 90 is not reachable on that path.
+  - Case B: computed b->elen > 0 → allocation at 85 stores a new pointer into b->ebuf; on pread failure the code at 89–91 executes free(b->ebuf) (line 90) then goto out. The earlier free at line 81 cannot have executed on this path because b->elen was not zero after recomputation.
+
+Therefore the two frees reported (line 81 and line 90) are on mutually exclusive control-flow paths inside a single call: they cannot both be executed in the same invocation of buffer_fill. The static tool (Cppcheck) is flagging both frees without recognizing the mutually exclusive branching, producing a false positive for "double free" within this function.
+
+Additional observations:
+- There is a real resource-management issue, but it's not a double-free: if b->ebuf was non-NULL on entry and the code takes Case B (allocates at line 85), the previous b->ebuf pointer is overwritten without being freed — that is a leak. The code frees only in Case A or upon a later pread failure (which frees only the newly allocated buffer).
+- After freeing at line 90, b->ebuf is not set to NULL before goto out; if callers assume b->ebuf is NULL when b->elen == FILE_BADSIZE, they could attempt to free it again. That would be a bug, but it's not demonstrated here; the shown double-free trace only points to the two frees inside this function which are mutually exclusive.
+
+Conclusion:
+- The reported "double free" at lines 81 and 90 is a false alarm: those frees occur on different, mutually exclusive branches and cannot both be executed during the same call to buffer_fill.
+- Suggested fixes (not required for the report): either free the old b->ebuf before overwriting it with malloc (to avoid the leak) and/or set b->ebuf = NULL after freeing in the error path (line 90) to avoid potential caller double-free later.
+
+@@@ false alarm @@@

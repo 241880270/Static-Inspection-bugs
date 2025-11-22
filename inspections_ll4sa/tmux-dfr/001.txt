@@ -1,0 +1,44 @@
+✅ 实际调用模型: gpt-5-mini
+Initial state
+- expanded is initialized to NULL before the loop.
+- The trace shows frees at line 196 (free(expanded); inside the if (args_has(args,'F')) branch) and at line 227 (free(expanded); right after a successful glob()).
+
+Simulated execution (concrete scenario)
+1. Iteration 1, args_has('F') == true:
+   - free(expanded) is called while expanded == NULL — free(NULL) is safe.
+   - expanded = format_single_from_target(...); say it returns ptrA.
+   - path = expanded (points to ptrA).
+   - path != "-" so code constructs pattern, calls glob(pattern,...).
+   - glob returns 0 (match). Execution goes to the success path:
+     - free(expanded);  // frees ptrA (line 227)
+     - free(pattern);
+     - ... continue loop
+
+2. Iteration 2, args_has('F') == true again:
+   - free(expanded) is called at line 196. But expanded still contains ptrA (there was no assignment to expanded = NULL after the free on line 227).
+   - This attempts to free ptrA again -> double free.
+
+Reasoning
+- The code frees expanded in two different places:
+  - Always before overwriting it when args_has('F') is true (line 196).
+  - Also freed unconditionally after a successful glob (line 227).
+- There is no assignment expanded = NULL after the free at line 227, so in the next loop iteration the first free(expanded) will operate on an already freed pointer.
+- free(NULL) is safe, but freeing a pointer that was previously freed is undefined behavior (double free).
+- That sequence demonstrates a real double-free bug.
+
+Notes on other branches
+- If glob fails, the code continues without freeing expanded; the next iteration will free expanded at line 196 as intended (no double free in that branch).
+- The bug only manifests when:
+  - args_has('F') is true for some iteration,
+  - glob succeeds in that iteration (so expanded is freed at line 227),
+  - and args_has('F') is true again in a later iteration (so free(expanded) at line 196 runs on already freed memory).
+
+Suggested fixes (brief)
+- After freeing expanded at line 227, set expanded = NULL.
+  or
+- Remove the free(expanded) at line 196 and instead always free before assigning a new value (but ensure no path frees it twice).
+  or
+- Structure ownership clearly so only one code site frees expanded (or use xfree-like function that sets pointer to NULL).
+
+Conclusion
+This is a genuine double-free bug: freeing expanded at line 227 and then freeing it again at line 196 in a later loop iteration can free the same pointer twice. @@@ real bug @@@
