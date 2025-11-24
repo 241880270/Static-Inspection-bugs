@@ -1,0 +1,481 @@
+/* src/config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to 1 if using 'alloca.c'. */
+#undef C_ALLOCA
+
+/* Define if you have the acos math function. */
+#undef HAVE_ACOS
+
+/* Define if you have the acosh math function. */
+#undef HAVE_ACOSH
+
+/* Define to 1 if you have 'alloca', as a function or macro. */
+#undef HAVE_ALLOCA
+
+/* Define to 1 if <alloca.h> works. */
+#undef HAVE_ALLOCA_H
+
+/* Define if you have the asin math function. */
+#undef HAVE_ASIN
+
+/* Define if you have the asinh math function. */
+#undef HAVE_ASINH
+
+/* Define if you have the atan math function. */
+#undef HAVE_ATAN
+
+/* Define if you have the atan2 math function. */
+#undef HAVE_ATAN2
+
+/* Define if you have the atanh math function. */
+#undef HAVE_ATANH
+
+/* Define to 1 if you have the 'atexit' function. */
+#undef HAVE_ATEXIT
+
+/* Define if you have the cbrt math function. */
+#undef HAVE_CBRT
+
+/* Define if you have the ceil math function. */
+#undef HAVE_CEIL
+
+/* Define if you have the copysign math function. */
+#undef HAVE_COPYSIGN
+
+/* Define if you have the cos math function. */
+#undef HAVE_COS
+
+/* Define if you have the cosh math function. */
+#undef HAVE_COSH
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
+/* Define if you have the drem math function. */
+#undef HAVE_DREM
+
+/* Define if you have the erf math function. */
+#undef HAVE_ERF
+
+/* Define if you have the erfc math function. */
+#undef HAVE_ERFC
+
+/* Define if you have the exp math function. */
+#undef HAVE_EXP
+
+/* Define if you have the exp10 math function. */
+#undef HAVE_EXP10
+
+/* Define if you have the exp2 math function. */
+#undef HAVE_EXP2
+
+/* Define if you have the expm1 math function. */
+#undef HAVE_EXPM1
+
+/* Define if you have the fabs math function. */
+#undef HAVE_FABS
+
+/* Define if you have the fdim math function. */
+#undef HAVE_FDIM
+
+/* Define if you have the floor math function. */
+#undef HAVE_FLOOR
+
+/* Define if you have the fma math function. */
+#undef HAVE_FMA
+
+/* Define if you have the fmax math function. */
+#undef HAVE_FMAX
+
+/* Define if you have the fmin math function. */
+#undef HAVE_FMIN
+
+/* Define if you have the fmod math function. */
+#undef HAVE_FMOD
+
+/* Define if you have the frexp math function. */
+#undef HAVE_FREXP
+
+/* Define if you have the gamma math function. */
+#undef HAVE_GAMMA
+
+/* Define to 1 if you have the 'gettimeofday' function. */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define to 1 if you have the 'gmtime' function. */
+#undef HAVE_GMTIME
+
+/* Define to 1 if you have the 'gmtime_r' function. */
+#undef HAVE_GMTIME_R
+
+/* Define if you have the hypot math function. */
+#undef HAVE_HYPOT
+
+/* Define if you have the ilogb math function. */
+#undef HAVE_ILOGB
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the 'isatty' function. */
+#undef HAVE_ISATTY
+
+/* Define if you have the j0 math function. */
+#undef HAVE_J0
+
+/* Define if you have the j1 math function. */
+#undef HAVE_J1
+
+/* Define if you have the jn math function. */
+#undef HAVE_JN
+
+/* Define if you have the ldexp math function. */
+#undef HAVE_LDEXP
+
+/* Define if you have the lgamma math function. */
+#undef HAVE_LGAMMA
+
+/* Define if you have the lgamma_r math function. */
+#undef HAVE_LGAMMA_R
+
+/* Define to 1 if the system includes libonig */
+#undef HAVE_LIBONIG
+
+/* Define to 1 if you have the 'localtime' function. */
+#undef HAVE_LOCALTIME
+
+/* Define to 1 if you have the 'localtime_r' function. */
+#undef HAVE_LOCALTIME_R
+
+/* Define if you have the log math function. */
+#undef HAVE_LOG
+
+/* Define if you have the log10 math function. */
+#undef HAVE_LOG10
+
+/* Define if you have the log1p math function. */
+#undef HAVE_LOG1P
+
+/* Define if you have the log2 math function. */
+#undef HAVE_LOG2
+
+/* Define if you have the logb math function. */
+#undef HAVE_LOGB
+
+/* Define to 1 if you have the 'memmem' function. */
+#undef HAVE_MEMMEM
+
+/* Define to 1 if you have the <minix/config.h> header file. */
+#undef HAVE_MINIX_CONFIG_H
+
+/* Define if you have the modf math function. */
+#undef HAVE_MODF
+
+/* Define if you have the nearbyint math function. */
+#undef HAVE_NEARBYINT
+
+/* Define if you have the nextafter math function. */
+#undef HAVE_NEXTAFTER
+
+/* Define if you have the nexttoward math function. */
+#undef HAVE_NEXTTOWARD
+
+/* Define if you have the pow math function. */
+#undef HAVE_POW
+
+/* Define to enable POSIX threads support. */
+#undef HAVE_PTHREAD
+
+/* Define to 1 if you have the 'pthread_key_create' function. */
+#undef HAVE_PTHREAD_KEY_CREATE
+
+/* Define to 1 if you have the 'pthread_once' function. */
+#undef HAVE_PTHREAD_ONCE
+
+/* Have PTHREAD_PRIO_INHERIT. */
+#undef HAVE_PTHREAD_PRIO_INHERIT
+
+/* Define if you have the remainder math function. */
+#undef HAVE_REMAINDER
+
+/* Define if you have the rint math function. */
+#undef HAVE_RINT
+
+/* Define if you have the round math function. */
+#undef HAVE_ROUND
+
+/* Define if you have the scalb math function. */
+#undef HAVE_SCALB
+
+/* Define if you have the scalbln math function. */
+#undef HAVE_SCALBLN
+
+/* Define if you have the scalbn math function. */
+#undef HAVE_SCALBN
+
+/* Define to 1 if you have the 'setenv' function. */
+#undef HAVE_SETENV
+
+/* Define to 1 if you have the 'setlocale' function. */
+#undef HAVE_SETLOCALE
+
+/* Define if you have the significand math function. */
+#undef HAVE_SIGNIFICAND
+
+/* Define if you have the sin math function. */
+#undef HAVE_SIN
+
+/* Define if you have the sinh math function. */
+#undef HAVE_SINH
+
+/* Define if you have the sqrt math function. */
+#undef HAVE_SQRT
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the 'strftime' function. */
+#undef HAVE_STRFTIME
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the 'strptime' function. */
+#undef HAVE_STRPTIME
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define if you have the tan math function. */
+#undef HAVE_TAN
+
+/* Define if you have the tanh math function. */
+#undef HAVE_TANH
+
+/* Define if you have the tgamma math function. */
+#undef HAVE_TGAMMA
+
+/* Define to 1 if you have the 'timegm' function. */
+#undef HAVE_TIMEGM
+
+/* Define to 1 if the system has the tm_gmt_off field in struct tm */
+#undef HAVE_TM_TM_GMT_OFF
+
+/* Define to 1 if the system has the __tm_gmt_off field in struct tm */
+#undef HAVE_TM___TM_GMT_OFF
+
+/* Define if you have the trunc math function. */
+#undef HAVE_TRUNC
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#undef HAVE_WCHAR_H
+
+/* Define if you have the y0 math function. */
+#undef HAVE_Y0
+
+/* Define if you have the y1 math function. */
+#undef HAVE_Y1
+
+/* Define if you have the yn math function. */
+#undef HAVE_YN
+
+/* Define to 1 if you have the '_isatty' function. */
+#undef HAVE__ISATTY
+
+/* Define if you have the __exp10 math function. */
+#undef HAVE___EXP10
+
+/* Define to 1 if the system supports __thread */
+#undef HAVE___THREAD
+
+/* machine is littleendian */
+#undef IEEE_8087
+
+/* machine is bigendian */
+#undef IEEE_MC68k
+
+/* The options jq was configured with. */
+#undef JQ_CONFIG
+
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
+#undef LT_OBJDIR
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define to necessary symbol if this constant uses a non-standard name on
+   your system. */
+#undef PTHREAD_CREATE_JOINABLE
+
+/* If using the C implementation of alloca, define if you know the
+   direction of stack growth for your system; otherwise it will be
+   automatically deduced at runtime.
+	STACK_DIRECTION > 0 => grows toward higher addresses
+	STACK_DIRECTION < 0 => grows toward lower addresses
+	STACK_DIRECTION = 0 => direction of growth unknown */
+#undef STACK_DIRECTION
+
+/* Define to 1 if all of the C89 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
+#undef STDC_HEADERS
+
+/* Define to enable decnum support. */
+#undef USE_DECNUM
+
+/* Enable extensions on AIX, Interix, z/OS.  */
+#ifndef _ALL_SOURCE
+# undef _ALL_SOURCE
+#endif
+/* Enable general extensions on macOS.  */
+#ifndef _DARWIN_C_SOURCE
+# undef _DARWIN_C_SOURCE
+#endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# undef __EXTENSIONS__
+#endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+/* Enable X/Open compliant socket functions that do not require linking
+   with -lxnet on HP-UX 11.11.  */
+#ifndef _HPUX_ALT_XOPEN_SOCKET_API
+# undef _HPUX_ALT_XOPEN_SOCKET_API
+#endif
+/* Identify the host operating system as Minix.
+   This macro does not affect the system headers' behavior.
+   A future release of Autoconf may stop defining this macro.  */
+#ifndef _MINIX
+# undef _MINIX
+#endif
+/* Enable general extensions on NetBSD.
+   Enable NetBSD compatibility extensions on Minix.  */
+#ifndef _NETBSD_SOURCE
+# undef _NETBSD_SOURCE
+#endif
+/* Enable OpenBSD compatibility extensions on NetBSD.
+   Oddly enough, this does nothing on OpenBSD.  */
+#ifndef _OPENBSD_SOURCE
+# undef _OPENBSD_SOURCE
+#endif
+/* Define to 1 if needed for POSIX-compatible behavior.  */
+#ifndef _POSIX_SOURCE
+# undef _POSIX_SOURCE
+#endif
+/* Define to 2 if needed for POSIX-compatible behavior.  */
+#ifndef _POSIX_1_SOURCE
+# undef _POSIX_1_SOURCE
+#endif
+/* Enable POSIX-compatible threading on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# undef _POSIX_PTHREAD_SEMANTICS
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-5:2014.  */
+#ifndef __STDC_WANT_IEC_60559_ATTRIBS_EXT__
+# undef __STDC_WANT_IEC_60559_ATTRIBS_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-1:2014.  */
+#ifndef __STDC_WANT_IEC_60559_BFP_EXT__
+# undef __STDC_WANT_IEC_60559_BFP_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-2:2015.  */
+#ifndef __STDC_WANT_IEC_60559_DFP_EXT__
+# undef __STDC_WANT_IEC_60559_DFP_EXT__
+#endif
+/* Enable extensions specified by C23 Annex F.  */
+#ifndef __STDC_WANT_IEC_60559_EXT__
+# undef __STDC_WANT_IEC_60559_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TS 18661-4:2015.  */
+#ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
+# undef __STDC_WANT_IEC_60559_FUNCS_EXT__
+#endif
+/* Enable extensions specified by C23 Annex H and ISO/IEC TS 18661-3:2015.  */
+#ifndef __STDC_WANT_IEC_60559_TYPES_EXT__
+# undef __STDC_WANT_IEC_60559_TYPES_EXT__
+#endif
+/* Enable extensions specified by ISO/IEC TR 24731-2:2010.  */
+#ifndef __STDC_WANT_LIB_EXT2__
+# undef __STDC_WANT_LIB_EXT2__
+#endif
+/* Enable extensions specified by ISO/IEC 24747:2009.  */
+#ifndef __STDC_WANT_MATH_SPEC_FUNCS__
+# undef __STDC_WANT_MATH_SPEC_FUNCS__
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+# undef _TANDEM_SOURCE
+#endif
+/* Enable X/Open extensions.  Define to 500 only if necessary
+   to make mbstate_t available.  */
+#ifndef _XOPEN_SOURCE
+# undef _XOPEN_SOURCE
+#endif
+
+
+/* Version number of package */
+#undef VERSION
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
+#else
+# ifndef WORDS_BIGENDIAN
+#  undef WORDS_BIGENDIAN
+# endif
+#endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define to 1 on platforms where this makes off_t a 64-bit type. */
+#undef _LARGE_FILES
+
+/* Number of bits in time_t, on hosts where this is settable. */
+#undef _TIME_BITS
+
+/* Define to 1 on platforms where this makes time_t a 64-bit type. */
+#undef __MINGW_USE_VC2005_COMPAT
+
+/* Define as 'unsigned int' if <stddef.h> doesn't define. */
+#undef size_t
+
+#define JQ_VERSION PACKAGE_VERSION
