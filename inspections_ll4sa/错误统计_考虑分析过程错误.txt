@@ -1,0 +1,383 @@
+file-check df
+1 T
+file: file-check/src/buffer.c
+line: 90
+file: file-check/src/buffer.c
+line: 81
+00:06:10                     FFF   不能分析反向数据流
+
+2 F
+file: file-check/src/buffer.c
+line: 81
+file: file-check/src/buffer.c
+line: 90
+00:03:27                   FFF未能考虑多次调用
+
+3 F
+file: file-check/src/buffer.c
+line: 81
+file: file-check/src/buffer.c
+line: 81
+00:01:29                FFF不能考虑多次调用
+
+4 F
+file: file-check/src/buffer.c
+line: 90
+file: file-check/src/buffer.c
+line: 90
+00:04:21                  FFF不能考虑多次调用
+
+
+5 T
+file: file-check/src/apprentice.c
+line: 787
+file: file-check/src/apprentice.c
+line: 547
+00:05:18			 FFF   不能分析反向数据流
+
+
+6 F
+file: file-check/src/apprentice.c
+line: 551
+file: file-check/src/apprentice.c
+line: 600
+00:05:12		
+
+7 F
+file: file-check/src/cdf.c
+line: 552
+file: file-check/src/cdf.c
+line: 547
+00:04:06                     TFF考虑了正反两种数据流
+
+8 F
+file: file-check/src/ascmagic.c
+line: 99
+file: file-check/src/encoding.c
+line: 178
+00:08:47
+
+
+
+file-check uaf
+1 F
+file: file-check/src/apprentice.c
+line: 692
+file: file-check/src/apprentice.c
+line: 693
+00:01:00
+
+2 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/magic.c
+line: 310
+00:02:23
+
+3 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/apprentice.c
+line: 543
+00:04:15
+
+4 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/apprentice.c
+line: 216
+00:01:06
+
+5 F
+file: file-check/src/apprentice.c
+line: 600
+file: file-check/src/file.c
+line: 448
+00:02:30
+
+
+
+jq  df
+1 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+file: jq-check/vendor/oniguruma/src/regexec.c
+line 4640
+00:03:16                               FFF  不能分析 反向数据流
+
+
+2 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+file: jq-check/vendor/oniguruma/src/regexec.c
+line 4636 
+00:00:48                               FFF   不能分析反向数据流
+
+
+3 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+00:00:35                            FFF分析行号出错
+ 
+4 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+00:00:30                             FFF   不能分析反向数据流
+
+
+5 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4640
+00:00:30
+
+6 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4636
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4644
+00:00:29
+
+7 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4860
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4879
+00:02:02
+
+8 F
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4879
+file: jq-check/vendor/oniguruma/src/regexec.c
+line: 4860
+00:01:02                                 FFF   不能分析反向数据流
+
+
+
+
+
+jq-uaf
+1 T
+file: jq-check/src/jv_alloc.c
+line: 180
+file: jq-check/src/builtin.c
+line: 1601
+00:07:08                         FFF分析行号出错
+
+
+2 T
+file: jq-check/src/builtin.c
+line: 1569
+file: jq-check/src/builtin.c
+line: 1601
+00:00:53
+
+3 T
+file: jq-check/src/builtin.c
+line: 1569
+file: jq-check/src/builtin.c
+line: 1600
+00:00:23
+
+4 F
+file: jq-check/src/builtin.c
+line: 1570
+file: jq-check/src/builtin.c
+line: 1601
+00:06:53                  FFF混淆参数
+
+5 F
+file: jq-check/src/builtin.c
+line: 1570
+file: jq-check/src/builtin.c
+line: 1600
+00:00:21			FFF混淆参数
+
+
+
+
+tmux- df
+1 T
+file: tmux-check/cmd-source-file.c
+line: 196
+file: tmux-check/cmd-source-file.c
+line: 227
+00:05:32
+
+2 F
+file: tmux-check/cmd-source-file.c
+line: 224 
+file: tmux-check/cmd-source-file.c
+line: 228
+00:00:49
+
+3 T
+file: tmux-check/cmd-source-file.c
+line: 227 
+file: tmux-check/cmd-source-file.c
+line: 196
+00:01:05
+
+4 F
+file: tmux-check/cmd-source-file.c
+line: 228 
+file: tmux-check/cmd-source-file.c
+line: 224
+00:00:31                 FFF   不能分析反向数据流
+
+5 T
+file: tmux-check/spawn.c
+line: 175
+file: tmux-check/spawn.c
+line: 176
+00:06:20
+
+6 F
+file: tmux-check/spawn.c
+line: 110
+file: tmux-check/spawn.c
+line: 175
+00:05:26            FFF分析行号出错
+
+
+8 F
+file: tmux-check/session.c
+line: 224
+file: tmux-check/session.c
+line: 225
+00:07:58
+
+9 F
+file: tmux-check/session.c
+line: 224
+file: tmux-check/session.c
+line: 228
+00:02:19                FFF混淆参数
+
+10 F
+file: tmux-check/session.c
+line: 225
+file: tmux-check/session.c
+line: 228
+00:01:14             FFF混淆参数
+
+11 F
+file: tmux-check/layout.c
+line: 92
+file: tmux-check/window.c
+line: 351
+00:04:10
+
+12 F
+file: tmux-check/cmd.c
+line: 574
+file: tmux-check/cmd-queue.c
+line: 399
+00:06:19
+
+13 F
+file: tmux-check/cmd.c
+line: 649
+file: tmux-check/cmd.c
+line: 663
+00:01:44
+
+14 F
+file: tmux-check/window.c
+line: 1334
+file: tmux-check/cmd-capture-pane.c
+line: 207
+00:04:07
+
+15 F
+file: tmux-check/compat/recallocarray.c
+line: 79
+file: tmux-check/cmd-parse.y
+line: 866
+00:06:02
+
+16 F
+file: tmux-check/build/cmd-parse.c
+line: 1170
+file: tmux-check/build/cmd-parse.c
+line: 2089
+00:09:52
+
+
+
+
+tmux- uaf
+1 T
+file: tmux-check/paste.c
+line: 294
+file: tmux-check/paste.c
+line: 296
+00:02:12				FFF
+
+2 T
+file: tmux-check/window.c
+line: 1168
+file: tmux-check/window-copy.c
+line: 3170
+00:05:44
+
+3 T
+file: tmux-check/window.c
+line: 367 
+file: tmux-check/window.c
+line: 402 
+00:04:30
+
+4 T
+file: tmux-check/window.c
+line: 367 
+file: tmux-check/window.c
+line: 414 
+00:00:31
+
+5 F
+file: tmux-check/cmd.c
+line: 574
+file: tmux-check/cmd-queue.c
+line: 397
+00:04:52
+
+6 F
+file: tmux-check/cmd-queue.c
+line: 399
+file: tmux-check/cmd.c
+line: 569
+00:02:22
+
+7 F
+file: tmux-check/window.c
+line: 1334
+file: tmux-check/cmd-capture-pane.c
+line: 198
+00:06:06
+
+8 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/window.c
+line: 1318
+00:02:05
+
+9 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/window.c
+line: 1324
+00:03:27                         FFF分析位置出错
+
+10 F
+file: tmux-check/cmd-capture-pane.c
+line: 207
+file: tmux-check/grid-view.c
+line: 234
+00:04:28
